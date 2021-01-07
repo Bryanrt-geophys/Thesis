@@ -21,14 +21,16 @@ long_transect <- transect %>%
                names_to = "timestep",
                names_prefix="Z_",
                values_to = "elevation") %>%
+  # this attempt to smooth out random noise may no longer be necessary 
   mutate(elevation = if_else(abs(elevation) < 10, 0, elevation)) # say that <0 is = 0
 
 long_transect$timestep = fct_inorder(long_transect$timestep)
 
 
 # used to find all values below zero and pick out runs longer than n and return the Y coordinates
-find_first_zero <- function(Y, elevation_vector, n){
+find_formost_basin <- function(Y, elevation_vector, n){
   
+  # values used to test sections of function:
   # elevation_vector = long_transect$elevation[which(long_transect$timestep == 56)]
   # Y = long_transect$Y[which(long_transect$timestep == 56)]
   # n = 50
@@ -58,7 +60,7 @@ find_first_zero <- function(Y, elevation_vector, n){
 basin_geometry <- long_transect %>%
   group_by(timestep) %>%
   summarize(
-    basin = find_first_zero(Y = Y, elevation_vector = elevation, n = 20)
+    basin = find_formost_basin(Y = Y, elevation_vector = elevation, n = 20)
   ) %>%
   nest(basin = -timestep) %>%
   mutate(
