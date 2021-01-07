@@ -26,9 +26,12 @@ long_transect <- transect %>%
 long_transect$timestep = fct_inorder(long_transect$timestep)
 
 
-# used to find mountain-side of basin - possibly replace variables with data.frames
-
+# used to find all values below zero and pick out runs longer than n and return the Y coordinates
 find_first_zero <- function(Y, elevation_vector, n){
+  
+  # elevation_vector = long_transect$elevation[which(long_transect$timestep == 56)]
+  # Y = long_transect$Y[which(long_transect$timestep == 56)]
+  # n = 50
   
   below_zero <- elevation_vector <= 0  
   
@@ -42,37 +45,17 @@ find_first_zero <- function(Y, elevation_vector, n){
   
   cumsums <- cumsum(r$lengths)
   
-  Y[elevation_vector %in% elevation_vector[(cumsums[i-1]+1):cumsums[i]]]
+  Y[(cumsums[i-1]+1):cumsums[i]]
+  
+  # Y[elevation_vector %in% elevation_vector[(cumsums[i-1]+1):cumsums[i]]]
+  # issue seems to be at this chunk - looks like this matches values found
+  # in elevation_vector[cumsums:cumsums] with values in elevation_vector
+  # this is problematic as there are repeat values
+  # instead, get Y values between i and i-1
   
 }
 
-
-
-# adds the smoothed curves to the long data, aids in visualization of process
-long_transect <- long_transect %>%
-  group_by(timestep) %>%
-  mutate(elevation_smooth = smooth.spline(elevation, spar=.5)$y)
-
-# can only use what is being piped into summarize 
-basin_geometry <- long_transect %>% 
-  group_by(timestep) %>%
-  mutate(mountain = find_mountain(elevation_smooth, elevation),
-         valley = find_valley(elevation_smooth, elevation),
-         i_lowest_point = which.min(elevation),
-         Z_lowest_point = elevation[i_lowest_point],
-         Y_lowest_point = Y[i_lowest_point])
-
-basin_geometry %>%
-  group_by(timestep) %>%
-  summarize(
-    basin = find_first_zero(Y = Y, elevation_vector = elevation, n = 20)
-  ) %>%
-  mutate(
-    min_Y = min(basin, na.rm = TRUE),
-    max_Y = max(basin, na.rm = TRUE)
-  )
-
-basin_geometry %>%
+basin_geometry <- long_transect %>%
   group_by(timestep) %>%
   summarize(
     basin = find_first_zero(Y = Y, elevation_vector = elevation, n = 20)
@@ -84,3 +67,12 @@ basin_geometry %>%
   ) %>%
   unnest(cols = c("min_Y", "max_Y")) %>%
   ungroup()
+
+ggplot(long_transect) +
+  geom_line(aes(x = -Y, y = elevation, color = timestep)) +
+  geom_point(data = basin_geometry,
+             mapping = aes(x = -min_Y, y = 1, color = timestep),
+             shape = 1, size = 2, show.legend = FALSE) +
+  geom_point(data = basin_geometry,
+             mapping = aes(x = -max_Y, y = 1, color = timestep),
+             shape = 2, size = 2, show.legend = FALSE)
