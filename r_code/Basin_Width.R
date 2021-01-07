@@ -60,15 +60,21 @@ find_formost_basin <- function(Y, elevation_vector, n){
 basin_geometry <- long_transect %>%
   group_by(timestep) %>%
   summarize(
-    basin = find_formost_basin(Y = Y, elevation_vector = elevation, n = 20)
+    basin_Y_coordinates = find_formost_basin(Y = Y, elevation_vector = elevation, n = 20)
   ) %>%
-  nest(basin = -timestep) %>%
+  nest(basin_Y_coordinates = -timestep) %>%
   mutate(
-    min_Y = map(basin, ~ min(.x$basin, na.rm = TRUE)),
-    max_Y = map(basin, ~ max(.x$basin, na.rm = TRUE))
+    min_Y = map(basin_Y_coordinates, ~ min(.x$basin_Y_coordinates, na.rm = TRUE)),
+    max_Y = map(basin_Y_coordinates, ~ max(.x$basin_Y_coordinates, na.rm = TRUE))
   ) %>%
   unnest(cols = c("min_Y", "max_Y")) %>%
   ungroup()
+
+# not sure why I can't do this in the piping above.. possibly the grouping?
+basin_geometry <- basin_geometry %>%
+  mutate(
+    basin_width = max_Y - min_Y
+  )
 
 ggplot(long_transect) +
   geom_line(aes(x = -Y, y = elevation, color = timestep)) +
