@@ -11,6 +11,8 @@ library(peakPick)
 library(tidyr)
 library(purrr)
 
+# I thnk this is the GitHub Repo version
+
 # Data
 transect <- readr::read_csv("https://raw.githubusercontent.com/Bryanrt-geophys/Thesis/Thesis/r_code/transect.csv")
 transect <- transect[-1]
